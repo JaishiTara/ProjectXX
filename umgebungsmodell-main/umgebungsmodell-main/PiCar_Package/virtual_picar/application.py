@@ -6,7 +6,6 @@ import threading
 import math
 from tkinter import ttk, BOTH, TRUE
 
-
 from virtual_picar.speed_rpm_gui import iSTEP_SPEED
 from virtual_picar.speed_rpm_gui import iSTEP_RPM
 from virtual_picar.speed_rpm_gui import iMAX_RPM
@@ -37,15 +36,18 @@ class App:
         self.speed_gauge = None
         self.rpm_gauge = None
         self.iThrottle_Value = 0
+        self.iObject_Value = 0
+        self.iMotor_Left = 0
+        self.iMotor_Right = 0
         self.iBrake_Value = 0
-        self.iSteering_Angle_Value = 0    # Output the wheel angle of the car
+        self.iSteering_Angle_Value = 0  # Output the wheel angle of the car
         self.iSteering_Value = 0
         self.iSelected_Clamp_15 = 0
         self.iSelected_Clamp_30 = 1
         self.iDrive_State = 0
         self.fSpeed = 0
         self.fRpm = 0
-        self.fAcceleration = 1    # 1 = Normal
+        self.fAcceleration = 1  # 1 = Normal
         self.fCool_Down_Acceleration = 1  # 1 = Normal
         self.iTimer = 0
         self.bProgram_terminated = False
@@ -134,16 +136,16 @@ class App:
         self.signal_list_window.wm_transient(self.main_window)
         self.signal_list_window.geometry("+%d+%d" % (self.x + 50, self.y + 750))
         ControlGUI.create_signal_list(self.signal_list_window)
-        ControlGUI.insert_to_signal_list(self.signal_list_window, "Speed", 0, 0)
-        ControlGUI.insert_to_signal_list(self.signal_list_window, "RPM", 0, 1)
-        ControlGUI.insert_to_signal_list(self.signal_list_window, "Steering angle", 0, 2)
-        ControlGUI.insert_to_signal_list(self.signal_list_window, "Drive State", 0, 3)
-        ControlGUI.insert_to_signal_list(self.signal_list_window, "Chip Temperature", 0, 4)
+        ControlGUI.insert_to_signal_list(self.signal_list_window, "Motor_Left_Active", 0, 0)
+        ControlGUI.insert_to_signal_list(self.signal_list_window, "Motor_Right_Active", 1, 1)
+        ControlGUI.insert_to_signal_list(self.signal_list_window, "Steering_Active", 1, 2)
+        ControlGUI.insert_to_signal_list(self.signal_list_window, "Car_Driving_Mode", 0, 3)
+        ControlGUI.insert_to_signal_list(self.signal_list_window, "Object_Detection", 0, 4)
 
     def build_output_list_window(self):
         self.output_list_window = tkinter.Toplevel(self.main_window)
         self.output_list_window.geometry('600x300')
-        self.output_list_window.title("output list")
+        self.output_list_window.title("Output list")
         self.output_list_window.wm_transient(self.main_window)
         self.output_list_window.geometry("+%d+%d" % (self.x + 50, self.y + 400))
         ControlGUI.create_output_list(self.output_list_window)
@@ -157,9 +159,9 @@ class App:
         signal_list = ControlGUI.get_signal_list(self.signal_list_window)
         signal_list.item(list_index, text=unit, values=(signal_name, signal_value))
 
-    def edit_output_list(self, list_index, output_name, output_value, unit):
+    def edit_output_list(self, list_index, output_name, output_value, index):
         output_list = ControlGUI.get_output_list(self.output_list_window)
-        output_list.item(list_index, text=unit, values=(output_name, output_value))
+        output_list.item(list_index, text=index, values=(output_name, output_value))
 
     def quit_button(self):
         self.bProgram_terminated = True
@@ -172,7 +174,7 @@ class App:
         time.sleep(0.05)
         return fVelocity + (fAcceleration_Factor * iThrottle)
 
-    def speed_acceleration(self, iThrottle, fVelocity):
+    def speed_acceleration(self, iThrottle, fVelocity, iSelected_Clamp_15):
         RATIO = 142.851
         fAcceleration_Factor = self.fAcceleration / RATIO
         time.sleep(0.05)
@@ -218,16 +220,16 @@ class App:
         return fVelocity
 
     def increase_speed(self, fVelocity):
-        MAX_SPEED = 50
+        MAX_SPEED = 80
         iThrottle = ControlGUI.get_throttle_value(self.throttle_window)
         if iThrottle == 0:
             return self.cool_down_speed(fVelocity)
         while fVelocity <= MAX_SPEED:
-            return self.speed_acceleration(iThrottle, fVelocity)
+            return self.speed_acceleration(iThrottle, fVelocity, iSelected_Clamp_15)
         return MAX_SPEED
 
     def increase_rpm(self, fVelocity):
-        MAX_RPM = 7    # 7 * 1000 = 7000 fRpm
+        MAX_RPM = 7  # 7 * 1000 = 7000 fRpm
         iThrottle = ControlGUI.get_throttle_value(self.throttle_window)
         if iThrottle == 0:
             return self.cool_down_rpm(fVelocity)
@@ -237,6 +239,8 @@ class App:
 
     def update_speed_and_rpm_gui(self):
         rpm_needle = self.increase_rpm(self.fRpm)
+        self.iSelected_Clamp_15 = 1
+        self.iSelected_Clamp_30 = 1
         self.fRpm = rpm_needle
         speed_needle = self.increase_speed(self.fSpeed)
         self.fSpeed = speed_needle
@@ -244,17 +248,17 @@ class App:
         self.speed_gauge.draw_needle(speed_needle)
 
     def update_signal_list_outputs(self):
-        self.edit_signal_list(0, "Speed", self.fSpeed, "m/s")
-        self.edit_signal_list(1, "RPM", self.fRpm * 1000, "Rpm")
-        self.edit_signal_list(2, "Steering angle", self.get_steering_angle(), "degrees")
-        self.edit_signal_list(3, "Drive State", self.current_drive_state(), "state")
-        self.edit_signal_list(4, "Temperature", self.get_temperature(self.get_time_minutes()), "Celsius")
+        self.edit_signal_list(0, "Motor_Left_Active", self.iMotor_Left, "1")
+        self.edit_signal_list(1, "Motor_Right_Active", self.iMotor_Right, "2")
+        self.edit_signal_list(2, "Steering_Active", self.iSteering_Value, "3")
+        self.edit_signal_list(3, "Car_Driving_Mode", self.current_drive_state(), "4")
+        self.edit_signal_list(4, "Object_Detection", self.iObject_Value, "5")
 
     def update_output_list_outputs(self):
         self.edit_output_list(0, "Speed", self.fSpeed, "m/s")
         self.edit_output_list(1, "RPM", self.fRpm * 1000, "Rpm")
         self.edit_output_list(2, "Steering angle", self.get_steering_angle(), "degrees")
-        self.edit_output_list(3, "Drive State", self.current_drive_state(), "state")
+        self.edit_output_list(3, "Drive State", self.iDrive_State, "mode")
         self.edit_output_list(4, "Temperature", self.get_temperature(self.get_time_minutes()), "Celsius")
 
     def start_timer_thread(self):
@@ -294,6 +298,15 @@ class App:
     def set_throttle(self, value):
         self.iThrottle_Value = value
 
+    def Object_Detection(self, value):
+        self.iObject_Value = value
+
+    def Motor_Left(self, value):
+        self.iMotor_Left = value
+
+    def Motor_Right(self, value):
+        self.iMotor_Right = value
+
     def set_brake(self, value):
         self.iBrake_Value = value
 
@@ -323,7 +336,7 @@ class App:
 
     def get_temperature(self, fMinutes):
         # Temperature curve
-        return -(38 * (pow(math.e, -((1/4) * fMinutes)))) + 60
+        return -(38 * (pow(math.e, -((1 / 4) * fMinutes)))) + 60
 
     def get_steering_angle(self):
         return self.iSteering_Angle_Value
@@ -342,7 +355,7 @@ class App:
 
     def get_clamp_15(self):
         return self.iSelected_Clamp_15
-    
+
     def get_clamp_30(self):
         return self.iSelected_Clamp_30
 

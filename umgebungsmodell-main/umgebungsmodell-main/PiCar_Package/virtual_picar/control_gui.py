@@ -9,8 +9,6 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 from matplotlib.backend_bases import key_press_handler
 
-
-
 class ControlGUI(Frame):
     def __init__(self, **kw):
         super().__init__(**kw)
@@ -68,7 +66,7 @@ class ControlGUI(Frame):
 
     def create_steering(self, value, lmax=-90, rmax=90):
         self.steering_scale = Scale(self, length=200, from_=lmax, to=rmax,
-                               orient=HORIZONTAL, troughcolor='blue')
+                               orient=HORIZONTAL, troughcolor='black')
         self.steering_scale.set(value)
         steering = Label(self, text="STEERING WHEEL", fg="red",
                          font=("Arial", 12, 'bold'))
@@ -206,7 +204,7 @@ class ControlGUI(Frame):
         self.signal_list.column("#0", width=120, minwidth=25)
         self.signal_list.column("Value", anchor=W, width=120)
 
-        self.signal_list.heading("#0", text="Unit", anchor=W)
+        self.signal_list.heading("#0", text="Index", anchor=W)
         self.signal_list.heading("Signal Name", text="Signal Name", anchor=W)
         self.signal_list.heading("Value", text="Value", anchor=W)
         self.signal_list.pack(pady=20)
@@ -214,12 +212,12 @@ class ControlGUI(Frame):
     def create_output_list(self):
         self.output_list = ttk.Treeview(self)
 
-        self.output_list['columns'] = ("output Name", "Value")
+        self.output_list['columns'] = ("Output Name", "Value")
         self.output_list.column("#0", width=120, minwidth=25)
         self.output_list.column("Value", anchor=W, width=120)
 
         self.output_list.heading("#0", text="Unit", anchor=W)
-        self.output_list.heading("output Name", text="output Name", anchor=W)
+        self.output_list.heading("Output Name", text="Output Name", anchor=W)
         self.output_list.heading("Value", text="Value", anchor=W)
         self.output_list.pack(pady=20)
 
