@@ -1,0 +1,10 @@
+setup.py
+virtual_picar/__init__.py
+virtual_picar/application.py
+virtual_picar/application_faulty.py
+virtual_picar/control_gui.py
+virtual_picar/speed_rpm_gui.py
+virtual_picar.egg-info/PKG-INFO
+virtual_picar.egg-info/SOURCES.txt
+virtual_picar.egg-info/dependency_links.txt
+virtual_picar.egg-info/top_level.txt
