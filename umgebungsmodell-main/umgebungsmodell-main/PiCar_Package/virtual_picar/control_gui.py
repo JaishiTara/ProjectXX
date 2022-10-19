@@ -13,9 +13,11 @@ class ControlGUI(Frame):
     def __init__(self, **kw):
         super().__init__(**kw)
         self.throttle_scale = None
+        self.zero_throttle_scale = None
         self.brake_scale = None
         self.steering_scale = None
         self.drive_scale = None
+        self.iDrive_State = None
         self.checkbox_clamp_15 = None
         self.checkbox_clamp_30 = None
 
@@ -47,11 +49,23 @@ class ControlGUI(Frame):
     def create_throttle(self, value, low=0, high=0):
         self.throttle_scale = Scale(self, length=250, from_=100, to=0,
                                orient=VERTICAL)
+
         self.throttle_label = Label(self, text="THROTTLE", fg="red",
                                font=("Arial", 12, 'bold'))
         self.throttle_scale.set(value)
         self.throttle_label.pack()
         self.throttle_scale.pack()
+
+    def create_zero_throttle(self, value, low=0, high=0):
+        self.zero_throttle_scale = Scale(self, length=0, to=0,
+                               orient=VERTICAL)
+
+        #self.zero_throttle_label = Label(self, text="THROTTLE", fg="red",
+        #                       font=("Arial", 12, 'bold'))
+        self.zero_throttle_scale.set(value)
+      #  self.zero_throttle_label.pack()
+        self.zero_throttle_scale.pack()
+
 
 
 
@@ -188,18 +202,17 @@ class ControlGUI(Frame):
                                             variable=clamp_30)
             self.checkbox_clamp_15.pack()
             self.checkbox_clamp_30.pack()
-            if value_15 == 1:
-                self.checkbox_clamp_15.select()
             if value_15 == 0:
                 self.checkbox_clamp_15.deselect()
             if value_30 == 1:
                 self.checkbox_clamp_30.select()
+            if value_15 == 1:
+                self.checkbox_clamp_15.select()
             if value_30 == 0:
                 self.checkbox_clamp_30.deselect()
 
     def create_signal_list(self):
         self.signal_list = ttk.Treeview(self)
-
         self.signal_list['columns'] = ("Signal Name", "Value")
         self.signal_list.column("#0", width=120, minwidth=25)
         self.signal_list.column("Value", anchor=W, width=120)
@@ -237,11 +250,17 @@ class ControlGUI(Frame):
     def get_throttle_value(self):
         return self.throttle_scale.get()
 
+    def get_zero_throttle_value(self):
+        return self.zero_throttle_scale.get()
+
     def get_brake_value(self):
         return self.brake_scale.get()
 
     def get_throttle_scale(self):
         return self.throttle_scale
+
+    def get_zero_throttle_scale(self):
+        return self.zero_throttle_scale
 
     def get_brake_scale(self):
         return self.brake_scale
@@ -252,11 +271,14 @@ class ControlGUI(Frame):
     def get_drive_state_scale(self):
         return self.drive_scale
 
+    def get_car_state(self):
+        return self.iDrive_State
+
     def get_clamp_15(self):
-        return self.checkbox_clamp_15
+        return self.checkbox_clamp_15.select()
 
     def get_clamp_30(self):
-        return self.checkbox_clamp_30
+        return self.checkbox_clamp_30.select()
 
     def get_steering_value(self):
         return self.steering_scale.get()

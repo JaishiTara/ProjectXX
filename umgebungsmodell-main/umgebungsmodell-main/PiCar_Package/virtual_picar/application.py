@@ -6,6 +6,7 @@ import threading
 import math
 from tkinter import ttk, BOTH, TRUE
 
+
 from virtual_picar.speed_rpm_gui import iSTEP_SPEED
 from virtual_picar.speed_rpm_gui import iSTEP_RPM
 from virtual_picar.speed_rpm_gui import iMAX_RPM
@@ -36,6 +37,7 @@ class App:
         self.speed_gauge = None
         self.rpm_gauge = None
         self.iThrottle_Value = 0
+        self.izero_Throttle_Value = 0
         self.iObject_Value = 0
         self.iMotor_Left = 0
         self.iMotor_Right = 0
@@ -44,7 +46,8 @@ class App:
         self.iSteering_Value = 0
         self.iSelected_Clamp_15 = 0
         self.iSelected_Clamp_30 = 1
-        self.iDrive_State = 0
+        self.iState = 0
+        self.iDrive_State = "OFF"
         self.fSpeed = 0
         self.fRpm = 0
         self.fAcceleration = 1  # 1 = Normal
@@ -67,6 +70,7 @@ class App:
         self.throttle_window.wm_transient(self.main_window)
         self.throttle_window.geometry("+%d+%d" % (self.x + 1350, self.y + 50))
         ControlGUI.create_throttle(self.throttle_window, self.iThrottle_Value)
+        ControlGUI.create_zero_throttle(self.throttle_window, self.izero_Throttle_Value)
 
     def build_speed_and_rpm_window(self):
         speed_and_rpm = Speedometer()
@@ -88,7 +92,7 @@ class App:
         self.gear_window.title("Gear Window")
         self.gear_window.wm_transient(self.main_window)
         self.gear_window.geometry("+%d+%d" % (self.x + 1600, self.y + 50))
-        ControlGUI.create_drive(self.gear_window, self.iDrive_State)
+        ControlGUI.create_drive(self.gear_window, self.iState)
 
     def build_plot_window(self):
         self.plot_window = tkinter.Toplevel(self.main_window)
@@ -136,10 +140,10 @@ class App:
         self.signal_list_window.wm_transient(self.main_window)
         self.signal_list_window.geometry("+%d+%d" % (self.x + 50, self.y + 750))
         ControlGUI.create_signal_list(self.signal_list_window)
-        ControlGUI.insert_to_signal_list(self.signal_list_window, "Motor_Left_Active", 0, 0)
-        ControlGUI.insert_to_signal_list(self.signal_list_window, "Motor_Right_Active", 1, 1)
-        ControlGUI.insert_to_signal_list(self.signal_list_window, "Steering_Active", 1, 2)
-        ControlGUI.insert_to_signal_list(self.signal_list_window, "Car_Driving_Mode", 0, 3)
+        ControlGUI.insert_to_signal_list(self.signal_list_window, "Motor_Left", 0, 0)
+        ControlGUI.insert_to_signal_list(self.signal_list_window, "Motor_Right", 1, 1)
+        ControlGUI.insert_to_signal_list(self.signal_list_window, "Steering", "Not Active", 2)
+        ControlGUI.insert_to_signal_list(self.signal_list_window, "Car_Mode", "OFF", 3)
         ControlGUI.insert_to_signal_list(self.signal_list_window, "Object_Detection", 0, 4)
 
     def build_output_list_window(self):
@@ -174,7 +178,7 @@ class App:
         time.sleep(0.05)
         return fVelocity + (fAcceleration_Factor * iThrottle)
 
-    def speed_acceleration(self, iThrottle, fVelocity, iSelected_Clamp_15):
+    def speed_acceleration(self, iThrottle, fVelocity):
         RATIO = 142.851
         fAcceleration_Factor = self.fAcceleration / RATIO
         time.sleep(0.05)
@@ -182,17 +186,27 @@ class App:
 
     def update_steering_value(self):
         iSTEERING_AND_WHEEL_RATIO = 2
+        self.iSteering_Value = ControlGUI.get_steering_value(self.steering_window)
         self.iSteering_Angle_Value = ControlGUI.get_steering_value(self.steering_window) / iSTEERING_AND_WHEEL_RATIO
+        if self.iSteering_Angle_Value == 0:
+            self.iSteering_Value = "Not Active"
+        if self.iSteering_Angle_Value != 0:
+            self.iSteering_Value = "Active"
+
 
     def current_drive_state(self):
         iState = ControlGUI.get_drive_state(self.gear_window)
         if iState == 0:
+            ControlGUI.get_throttle_scale(self.throttle_window).set(self.iThrottle_Value)
             return "P"
         if iState == 1:
+            ControlGUI.get_zero_throttle_scale(self.throttle_window).set(self.izero_Throttle_Value)
             return "D"
         if iState == 2:
+            ControlGUI.get_throttle_scale(self.throttle_window).set(self.iThrottle_Value)
             return "N"
         if iState == 3:
+            ControlGUI.get_zero_throttle_scale(self.throttle_window).set(self.izero_Throttle_Value)
             return "R"
 
     def cool_down_rpm(self, fVelocity):
@@ -225,7 +239,7 @@ class App:
         if iThrottle == 0:
             return self.cool_down_speed(fVelocity)
         while fVelocity <= MAX_SPEED:
-            return self.speed_acceleration(iThrottle, fVelocity, iSelected_Clamp_15)
+            return self.speed_acceleration(iThrottle, fVelocity)
         return MAX_SPEED
 
     def increase_rpm(self, fVelocity):
@@ -239,8 +253,6 @@ class App:
 
     def update_speed_and_rpm_gui(self):
         rpm_needle = self.increase_rpm(self.fRpm)
-        self.iSelected_Clamp_15 = 1
-        self.iSelected_Clamp_30 = 1
         self.fRpm = rpm_needle
         speed_needle = self.increase_speed(self.fSpeed)
         self.fSpeed = speed_needle
@@ -248,17 +260,17 @@ class App:
         self.speed_gauge.draw_needle(speed_needle)
 
     def update_signal_list_outputs(self):
-        self.edit_signal_list(0, "Motor_Left_Active", self.iMotor_Left, "1")
-        self.edit_signal_list(1, "Motor_Right_Active", self.iMotor_Right, "2")
-        self.edit_signal_list(2, "Steering_Active", self.iSteering_Value, "3")
-        self.edit_signal_list(3, "Car_Driving_Mode", self.current_drive_state(), "4")
+        self.edit_signal_list(0, "Motor_Left", self.iMotor_Left, "1")
+        self.edit_signal_list(1, "Motor_Right", self.iMotor_Right, "2")
+        self.edit_signal_list(2, "Steering", self.get_steering(), "3")
+        self.edit_signal_list(3, "Car_Mode", self.get_drive_state(), "4")
         self.edit_signal_list(4, "Object_Detection", self.iObject_Value, "5")
 
     def update_output_list_outputs(self):
         self.edit_output_list(0, "Speed", self.fSpeed, "m/s")
         self.edit_output_list(1, "RPM", self.fRpm * 1000, "Rpm")
         self.edit_output_list(2, "Steering angle", self.get_steering_angle(), "degrees")
-        self.edit_output_list(3, "Drive State", self.iDrive_State, "mode")
+        self.edit_output_list(3, "Drive State", self.current_drive_state(), "mode")
         self.edit_output_list(4, "Temperature", self.get_temperature(self.get_time_minutes()), "Celsius")
 
     def start_timer_thread(self):
@@ -276,6 +288,9 @@ class App:
     def update_throttle_window(self):
         ControlGUI.get_throttle_scale(self.throttle_window).set(self.iThrottle_Value)
 
+    def update_zero_throttle_window(self):
+        ControlGUI.get_zero_throttle_scale(self.throttle_window).set(self.izero_Throttle_Value)
+
     def update_brake_window(self):
         ControlGUI.get_brake_scale(self.brake_window).set(self.iBrake_Value)
 
@@ -283,28 +298,43 @@ class App:
         ControlGUI.get_steering_scale(self.steering_window).set(self.iSteering_Value)
 
     def update_gear_window(self):
-        ControlGUI.get_drive_state_scale(self.gear_window).set(self.iDrive_State)
+        ControlGUI.get_drive_state_scale(self.gear_window).set(self.iState)
 
     def update_clamp_window(self):
-        if self.iSelected_Clamp_15 == 1:
-            ControlGUI.get_clamp_15(self.clamps_window).select()
         if self.iSelected_Clamp_15 == 0:
             ControlGUI.get_clamp_15(self.clamps_window).deselect()
         if self.iSelected_Clamp_30 == 1:
             ControlGUI.get_clamp_30(self.clamps_window).select()
+        if self.iSelected_Clamp_15 == 1:
+            ControlGUI.get_clamp_15(self.clamps_window).select()
         if self.iSelected_Clamp_30 == 0:
             ControlGUI.get_clamp_30(self.clamps_window).deselect()
+
+
+    def update_Car_Mode(self):
+        ControlGUI.create_clamps(self.clamps_window, self.iSelected_Clamp_15, self.iSelected_Clamp_30)
+        ControlGUI.insert_to_signal_list(self, "Car_Mode", self.get_drive_state(), "4")
+        self.iSelected_Clamp_15 = ControlGUI.get_clamp_15(self.clamps_window)
+        self.iSelected_Clamp_30 = ControlGUI.get_clamp_30(self.clamps_window)
+        if self.update_clamp_window(self.iSelected_Clamp_15) == 1 and self.update_clamp_window(self.iSelected_Clamp_30 == 1):
+            ControlGUI.insert_to_signal_list(self.signal_list_window, "Car_Mode", "ON", 3)
+            #self.iDrive_State.set("ON")
+        else:
+            self.iDrive_State.set("OFF")
 
     def set_throttle(self, value):
         self.iThrottle_Value = value
 
-    def Object_Detection(self, value):
+    def set_zero_throttle(self, value):
+        self.izero_Throttle_Value = value
+
+    def set_Object_Detection(self, value):
         self.iObject_Value = value
 
-    def Motor_Left(self, value):
+    def set_Motor_Left(self, value):
         self.iMotor_Left = value
 
-    def Motor_Right(self, value):
+    def set_Motor_Right(self, value):
         self.iMotor_Right = value
 
     def set_brake(self, value):
@@ -325,8 +355,16 @@ class App:
     def deselect_clamp_30(self):
         self.iSelected_Clamp_30 = 0
 
-    def set_drive_state(self, mode):
-        self.iDrive_State = mode
+    def set_drive_state(self, value):
+        self.iDrive_State = value
+
+    def get_drive_state(self):
+        ControlGUI.create_clamps(self.clamps_window, self.iSelected_Clamp_15, self.iSelected_Clamp_30)
+        if self.iSelected_Clamp_30 == 1 and self.iSelected_Clamp_15 == 1:
+            self.iDrive_State = "ON"
+        if self.iSelected_Clamp_30 != 0 or self.iSelected_Clamp_15 != 0:
+            self.iDrive_State = "OFF"
+        return self.iDrive_State
 
     def get_speed(self):
         return self.fSpeed
@@ -344,14 +382,14 @@ class App:
     def get_throttle(self):
         return self.iThrottle_Value
 
+    def get_zero_throttle(self):
+        return self.izero_Throttle_Value
+
     def get_brake(self):
         return self.iBrake_Value
 
     def get_steering(self):
         return self.iSteering_Value
-
-    def get_drive_state(self):
-        return self.iDrive_State
 
     def get_clamp_15(self):
         return self.iSelected_Clamp_15
