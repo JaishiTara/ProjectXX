@@ -5,7 +5,7 @@ import tkinter
 import threading
 import math
 from tkinter import ttk, BOTH, TRUE
-
+import random
 
 from virtual_picar.speed_rpm_gui import iSTEP_SPEED
 from virtual_picar.speed_rpm_gui import iSTEP_RPM
@@ -55,6 +55,10 @@ class App:
         self.iTimer = 0
         self.bProgram_terminated = False
         self.bStarted_With_Exam = False
+        self.iObject_distance_front = "out of range"
+        self.iObject_distance_rare = "out of range"
+        self.iObject_distance_left = "out of range"
+        self.iObject_distance_right = "out of range"
 
     def build_main_window(self):
         self.main_window = tkinter.Tk()
@@ -158,6 +162,10 @@ class App:
         ControlGUI.insert_to_output_list(self.output_list_window, "Steering angle", 0, 2)
         ControlGUI.insert_to_output_list(self.output_list_window, "Drive State", 0, 3)
         ControlGUI.insert_to_output_list(self.output_list_window, "Chip Temperature", 0, 4)
+        ControlGUI.insert_to_output_list(self.output_list_window, "Sensor distance front", 0, 5)
+        ControlGUI.insert_to_output_list(self.output_list_window, "Sensor distance rare", 0, 6)
+        ControlGUI.insert_to_output_list(self.output_list_window, "Sensor distance left", 0, 7)
+        ControlGUI.insert_to_output_list(self.output_list_window, "Sensor distance right", 0, 8)
 
     def edit_signal_list(self, list_index, signal_name, signal_value, unit):
         signal_list = ControlGUI.get_signal_list(self.signal_list_window)
@@ -272,6 +280,10 @@ class App:
         self.edit_output_list(2, "Steering angle", self.get_steering_angle(), "degrees")
         self.edit_output_list(3, "Drive State", self.current_drive_state(), "mode")
         self.edit_output_list(4, "Temperature", self.get_temperature(self.get_time_minutes()), "Celsius")
+        self.edit_output_list(5, "Sensor distance front", self.distance_calculation(), "Cm")
+        self.edit_output_list(6, "Sensor distance rare", self.distance_calculation_rare(), "Cm")
+        self.edit_output_list(7, "Sensor distance left", self.distance_calculation_left(), "Cm")
+        self.edit_output_list(8, "Sensor distance right", self.distance_calculation_right(), "Cm")
 
     def start_timer_thread(self):
         timer_thread = threading.Thread(target=self.iterate_time)
@@ -375,6 +387,64 @@ class App:
     def get_temperature(self, fMinutes):
         # Temperature curve
         return -(38 * (pow(math.e, -((1 / 4) * fMinutes)))) + 60
+
+    def distance_calculation(self):
+
+        number = ["Out of range", 500, 400, 300, 200, 100, 80, 50, 40, 30, 25, 20, 19, 12]
+
+        random_item = random.choice(number)
+
+        return random_item
+
+    def distance_calculation_rare(self):
+
+        number = ["Out of range", 500, 400, 300, 200, 100, 80, 50, 40, 30, 25, 20, 19, 12]
+
+        random_item = random.choice(number)
+
+        return random_item
+
+
+    def distance_calculation_left(self):
+
+        number = ["Out of range", 500, 400, 300, 200, 100, 80, 50, 40, 30, 25, 20, 19, 12]
+
+        random_item = random.choice(number)
+
+        return random_item
+
+    def distance_calculation_right(self):
+
+        number = ["Out of range", 500, 400, 300, 200, 100, 80, 50, 40, 30, 25, 20, 19, 12]
+
+        random_item = random.choice(number)
+
+        return random_item
+
+
+    def set_sensor_distance_front(self, fVal):
+        self.iObject_distance_front = fVal
+
+    def get_sensor_distance_front(self):
+        return self.iObject_distance_front
+
+    def set_sensor_distance_rare(self, fVal):
+        self.iObject_distance_rare = fVal
+
+    def get_sensor_distance_rare(self):
+        return self.iObject_distance_rare
+
+    def set_sensor_distance_left(self, fVal):
+        self.iObject_distance_left = fVal
+
+    def get_sensor_distance_left(self):
+        return self.iObject_distance_left
+
+    def set_sensor_distance_right(self, fVal):
+        self.iObject_distance_right = fVal
+
+    def get_sensor_distance_right(self):
+        return  self.iObject_distance_right
 
     def get_steering_angle(self):
         return self.iSteering_Angle_Value
