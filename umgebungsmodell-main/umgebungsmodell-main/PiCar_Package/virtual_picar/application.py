@@ -443,7 +443,7 @@ class App:
     def set_sensor_distance_right(self, fVal):
         self.iObject_distance_right = fVal
 
-    def get_sensor_distance_right(self):
+    def get_sensor_distance_right(self): 
         return  self.iObject_distance_right
 
     def get_steering_angle(self):
